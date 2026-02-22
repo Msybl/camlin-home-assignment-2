@@ -60,4 +60,8 @@ app.MapGet("/wallet", async (WalletDb db) =>
 
 app.Run();
  
-record WalletRequest(string? Currency, decimal Amount);
+public class WalletRequest
+{
+    public string? Currency { get; set; }
+    public decimal Amount { get; set; }
+}
