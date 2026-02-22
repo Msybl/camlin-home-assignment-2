@@ -1,0 +1,20 @@
+# Build
+bin/
+obj/
+
+# Database
+*.db
+
+# Visual Studio
+.vs/
+.vscode/
+*.user
+
+# dotnet
+*.suo
+.DS_Store
+
+# Environment
+.env
+launchSettings.json
+appsettings.Development.json
