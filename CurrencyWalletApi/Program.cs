@@ -27,7 +27,8 @@ builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
-app.Services.GetRequiredService<WalletDb>().Database.EnsureCreated();
+using var scope = app.Services.CreateScope();
+scope.ServiceProvider.GetRequiredService<WalletDb>().Database.EnsureCreated();
 
 if (app.Environment.IsDevelopment())
 {
