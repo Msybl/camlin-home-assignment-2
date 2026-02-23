@@ -15,6 +15,15 @@ A REST API for tracking the current Polish złoty (PLN) value of money held in f
 ### Running Locally
 - .NET 10 SDK
 
+### NuGet Packages
+```bash
+dotnet add package Microsoft.EntityFrameworkCore.Sqlite
+dotnet add package Microsoft.EntityFrameworkCore.Design
+dotnet add package Microsoft.EntityFrameworkCore.InMemory
+dotnet add package Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore
+dotnet add package NSwag.AspNetCore
+```
+
 ## Quick Start
 ### Docker
 ```bash
