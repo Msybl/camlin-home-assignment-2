@@ -11,6 +11,14 @@ builder.Services.AddOpenApiDocument(config =>
     config.DocumentName = "CurrencyWalletAPI";
     config.Title = "Currency Wallet API";
     config.Version = "v1";
+    config.AddSecurity("ApiKey", new NSwag.OpenApiSecurityScheme
+    {
+        Type = NSwag.OpenApiSecuritySchemeType.ApiKey,
+        Name = "X-API-Key",
+        In = NSwag.OpenApiSecurityApiKeyLocation.Header,
+        Description = "Enter your API key"
+    });
+    config.OperationProcessors.Add(new NSwag.Generation.Processors.Security.OperationSecurityScopeProcessor("ApiKey"));
 });
 builder.Services.AddHttpClient();
 
@@ -31,18 +39,26 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/", () => "Hello World!");
 
 // POST /wallet/add
-app.MapPost("/wallet/add", async (WalletRequest req, WalletDb db) =>
+app.MapPost("/wallet/add", async (WalletRequest req, WalletDb db, HttpContext context) =>
 {
-    db.WalletEntries.Add(new WalletEntry { UserId = "user1", Currency = req.Currency!, Amount = req.Amount });
+    var userId = GetUserId(context);
+    if (userId is null)
+        return Results.Unauthorized();
+
+    db.WalletEntries.Add(new WalletEntry { UserId = userId, Currency = req.Currency!, Amount = req.Amount });
     await db.SaveChangesAsync();
     return Results.Ok(new { message = "Currency added" });
 });
 
 // POST /wallet/subtract
-app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db) =>
+app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db, HttpContext context) =>
 {
+    var userId = GetUserId(context);
+    if (userId is null)
+        return Results.Unauthorized();
+
     var existing = await db.WalletEntries
-        .FirstOrDefaultAsync(e => e.UserId == "user1" && e.Currency == req.Currency);
+        .FirstOrDefaultAsync(e => e.UserId == userId && e.Currency == req.Currency);
 
     existing!.Amount -= req.Amount;
     await db.SaveChangesAsync();
@@ -50,10 +66,14 @@ app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db) =>
 });
 
 // GET /wallet
-app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory) =>
+app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory, HttpContext context) =>
 {
+    var userId = GetUserId(context);
+    if (userId is null)
+        return Results.Unauthorized();
+
     var entries = await db.WalletEntries
-        .Where(e => e.UserId == "user1")
+        .Where(e => e.UserId == userId)
         .ToListAsync();
 
     var client = httpFactory.CreateClient();
@@ -73,6 +93,17 @@ app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory) =>
 
     return Results.Ok(new { wallet = walletResult, total_pln = Math.Round(totalPln, 2) });
 });
+
+string? GetUserId(HttpContext context)
+{
+    var apiKey = context.Request.Headers["X-API-Key"].ToString();
+
+    if (apiKey == "key-123") return "user1";
+    if (apiKey == "key-456") return "user2";
+    if (apiKey == "key-789") return "user3";
+
+    return null;
+}
 
 app.Run();
  
