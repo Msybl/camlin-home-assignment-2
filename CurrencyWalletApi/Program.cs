@@ -3,7 +3,7 @@ using NSwag.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<WalletDb>(opt => opt.UseInMemoryDatabase("WalletDb"));
+builder.Services.AddSqlite<WalletDb>("Data Source=wallet.db");
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApiDocument(config =>
