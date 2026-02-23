@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using NSwag.AspNetCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,7 @@ builder.Services.AddOpenApiDocument(config =>
     config.OperationProcessors.Add(new NSwag.Generation.Processors.Security.OperationSecurityScopeProcessor("ApiKey"));
 });
 builder.Services.AddHttpClient();
+builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
@@ -66,7 +69,7 @@ app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db, HttpConte
 });
 
 // GET /wallet
-app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory, HttpContext context) =>
+app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory, HttpContext context, IMemoryCache cache) =>
 {
     var userId = GetUserId(context);
     if (userId is null)
@@ -81,15 +84,20 @@ app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory, HttpCo
     decimal totalPln = 0;
 
     foreach (var entry in entries)
+{
+    // Check cache. If not exist fetch from NBP
+    if (!cache.TryGetValue(entry.Currency, out decimal rate))
     {
         var url = $"https://api.nbp.pl/api/exchangerates/rates/c/{entry.Currency}/?format=json";
         var response = await client.GetFromJsonAsync<NbpResponse>(url);
-        var rate = response?.Rates?.FirstOrDefault()?.Ask ?? 0;
-        var plnValue = Math.Round(entry.Amount * rate, 2);
-        totalPln += plnValue;
-
-        walletResult.Add(new WalletEntryResult { Currency = entry.Currency, Amount = entry.Amount, Rate = rate, PlnValue = plnValue });
+        rate = response?.Rates?.FirstOrDefault()?.Ask ?? 0;
+        cache.Set(entry.Currency, rate, TimeSpan.FromHours(1));
     }
+
+    var plnValue = Math.Round(entry.Amount * rate, 2);
+    totalPln += plnValue;
+    walletResult.Add(new WalletEntryResult { Currency = entry.Currency, Amount = entry.Amount, Rate = rate, PlnValue = plnValue });
+}
 
     return Results.Ok(new { wallet = walletResult, total_pln = Math.Round(totalPln, 2) });
 });
