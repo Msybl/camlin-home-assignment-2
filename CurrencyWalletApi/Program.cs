@@ -120,20 +120,20 @@ app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory, HttpCo
     decimal totalPln = 0;
 
     foreach (var entry in entries)
-{
-    // Check cache. If not exist fetch from NBP
-    if (!cache.TryGetValue(entry.Currency, out decimal rate))
     {
-        var url = $"https://api.nbp.pl/api/exchangerates/rates/c/{entry.Currency}/?format=json";
-        var response = await client.GetFromJsonAsync<NbpResponse>(url);
-        rate = response?.Rates?.FirstOrDefault()?.Ask ?? 0;
-        cache.Set(entry.Currency, rate, TimeSpan.FromHours(1));
-    }
+        // Check cache. If not exist fetch from NBP
+        if (!cache.TryGetValue(entry.Currency, out decimal rate))
+        {
+            var url = $"https://api.nbp.pl/api/exchangerates/rates/c/{entry.Currency}/?format=json";
+            var response = await client.GetFromJsonAsync<NbpResponse>(url);
+            rate = response?.Rates?.FirstOrDefault()?.Ask ?? 0;
+            cache.Set(entry.Currency, rate, TimeSpan.FromHours(1));
+        }
 
-    var plnValue = Math.Round(entry.Amount * rate, 2);
-    totalPln += plnValue;
-    walletResult.Add(new WalletEntryResult { Currency = entry.Currency, Amount = entry.Amount, Rate = rate, PlnValue = plnValue });
-}
+        var plnValue = Math.Round(entry.Amount * rate, 2);
+        totalPln += plnValue;
+        walletResult.Add(new WalletEntryResult { Currency = entry.Currency, Amount = entry.Amount, Rate = rate, PlnValue = plnValue });
+    }
 
     return Results.Ok(new { wallet = walletResult, total_pln = Math.Round(totalPln, 2) });
 });
