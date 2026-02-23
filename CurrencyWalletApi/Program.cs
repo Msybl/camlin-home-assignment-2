@@ -48,7 +48,22 @@ app.MapPost("/wallet/add", async (WalletRequest req, WalletDb db, HttpContext co
     if (userId is null)
         return Results.Unauthorized();
 
-    db.WalletEntries.Add(new WalletEntry { UserId = userId, Currency = req.Currency!, Amount = req.Amount });
+    if (string.IsNullOrEmpty(req.Currency) || req.Currency.Length != 3)
+        return Results.BadRequest(new { error = "Currency must be a 3 letter code" });
+
+    if (req.Amount <= 0)
+        return Results.BadRequest(new { error = "Amount must be positive" });
+
+    var currency = req.Currency.ToUpper();
+
+    var existing = await db.WalletEntries
+        .FirstOrDefaultAsync(e => e.UserId == userId && e.Currency == currency);
+
+    if (existing == null)
+        db.WalletEntries.Add(new WalletEntry { UserId = userId, Currency = currency, Amount = req.Amount });
+    else
+        existing.Amount += req.Amount;
+
     await db.SaveChangesAsync();
     return Results.Ok(new { message = "Currency added" });
 });
@@ -60,10 +75,28 @@ app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db, HttpConte
     if (userId is null)
         return Results.Unauthorized();
 
-    var existing = await db.WalletEntries
-        .FirstOrDefaultAsync(e => e.UserId == userId && e.Currency == req.Currency);
+    if (string.IsNullOrEmpty(req.Currency) || req.Currency.Length != 3)
+        return Results.BadRequest(new { error = "Currency must be a 3 letter code" });
 
-    existing!.Amount -= req.Amount;
+    if (req.Amount <= 0)
+        return Results.BadRequest(new { error = "Amount must be positive" });
+
+    var currency = req.Currency.ToUpper();
+
+    var existing = await db.WalletEntries
+        .FirstOrDefaultAsync(e => e.UserId == userId && e.Currency == currency);
+
+    if (existing == null)
+        return Results.BadRequest(new { error = "Currenccy doesn't exist in the wallet" });
+
+    if (existing.Amount < req.Amount)
+        return Results.BadRequest(new { error = "Insufficient funds", available = existing.Amount, requested = req.Amount });
+
+    existing.Amount -= req.Amount;
+
+    if (existing.Amount == 0)
+        db.WalletEntries.Remove(existing);
+
     await db.SaveChangesAsync();
     return Results.Ok(new { message = "Currency subtracted" });
 });
