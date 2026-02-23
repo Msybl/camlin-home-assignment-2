@@ -39,7 +39,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.MapGet("/", () => "Hello World!");
+app.MapGet("/", () => "Camlin Home Assignment with C#");
 
 // POST /wallet/add
 app.MapPost("/wallet/add", async (WalletRequest req, WalletDb db, HttpContext context) =>
