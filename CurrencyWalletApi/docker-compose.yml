@@ -1,0 +1,9 @@
+services:
+  api:
+    build: .
+    ports:
+      - "5127:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development

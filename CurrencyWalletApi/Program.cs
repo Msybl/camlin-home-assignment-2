@@ -27,6 +27,8 @@ builder.Services.AddMemoryCache();
 
 var app = builder.Build();
 
+app.Services.GetRequiredService<WalletDb>().Database.EnsureCreated();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseOpenApi();
@@ -45,7 +47,7 @@ app.MapGet("/", () => "Camlin Home Assignment with C#");
 app.MapPost("/wallet/add", async (WalletRequest req, WalletDb db, HttpContext context) =>
 {
     var userId = GetUserId(context);
-    if (userId is null)
+    if (userId == null)
         return Results.Unauthorized();
 
     if (string.IsNullOrEmpty(req.Currency) || req.Currency.Length != 3)
@@ -72,7 +74,7 @@ app.MapPost("/wallet/add", async (WalletRequest req, WalletDb db, HttpContext co
 app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db, HttpContext context) =>
 {
     var userId = GetUserId(context);
-    if (userId is null)
+    if (userId == null)
         return Results.Unauthorized();
 
     if (string.IsNullOrEmpty(req.Currency) || req.Currency.Length != 3)
@@ -105,7 +107,7 @@ app.MapPost("/wallet/subtract", async (WalletRequest req, WalletDb db, HttpConte
 app.MapGet("/wallet", async (WalletDb db, IHttpClientFactory httpFactory, HttpContext context, IMemoryCache cache) =>
 {
     var userId = GetUserId(context);
-    if (userId is null)
+    if (userId == null)
         return Results.Unauthorized();
 
     var entries = await db.WalletEntries
